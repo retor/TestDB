@@ -15,6 +15,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".services.SaveService"
+            android:enabled="true" />
+
+        <provider
+            android:name=".data.db.providers.ListProvider"
+            android:authorities="ru.barsopen.providers.listItems"
+            android:enabled="true" />
+        <provider
+            android:name=".data.db.providers.QueryProvider"
+            android:authorities="ru.barsopen.providers.query"
+            android:enabled="true" />
     </application>
 
 </manifest>

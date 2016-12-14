@@ -1,11 +1,14 @@
 package ru.barsopen.testdb.data.db.providers
 
 import android.content.ContentProvider
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.UriMatcher
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
+import android.text.TextUtils
+import android.util.Log
 import ru.barsopen.testdb.data.db.DBHelper
 
 
@@ -16,11 +19,6 @@ import ru.barsopen.testdb.data.db.DBHelper
 class ListProvider : ContentProvider() {
 
     companion object {
-        // // Константы для БД
-        // БД
-        val DB_NAME = "listBD"
-        val DB_VERSION = 1
-
         // Таблица
         val LIST_TABLE = "listTable"
 
@@ -31,8 +29,8 @@ class ListProvider : ContentProvider() {
         val ITEM_DATE = "date"
 
         // Скрипт создания таблицы
-        val DB_CREATE = "create table ${LIST_TABLE}(${ITEM_ID} integer primary key autoincrement, " +
-                "${ITEM_TITLE} text, ${ITEM_DESCRIPTION} text, ${ITEM_DATE} number);"
+        val DB_CREATE = "create table $LIST_TABLE($ITEM_ID integer primary key autoincrement, " +
+                "$ITEM_TITLE text, $ITEM_DESCRIPTION text, $ITEM_DATE number);"
 
         // // Uri
         // authority
@@ -59,7 +57,6 @@ class ListProvider : ContentProvider() {
         val URI_LIST_ID = 2
     }
 
-    // описание и создание UriMatcher
     private val uriMatcher: UriMatcher by lazy {
         val iMatcher = UriMatcher(UriMatcher.NO_MATCH)
         iMatcher.addURI(AUTHORITY, LIST_PATH, URI_LIST)
@@ -67,33 +64,112 @@ class ListProvider : ContentProvider() {
         iMatcher
     }
 
-    var dbHelper: DBHelper? = null
-    var db: SQLiteDatabase? = null
-
-    override fun onCreate(): Boolean {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private val dbHelper: DBHelper by lazy {
+        DBHelper(context)
     }
 
+    private val db: SQLiteDatabase by lazy {
+        dbHelper.writableDatabase
+    }
+
+    override fun onCreate(): Boolean {
+        return true
+    }
+
+    private val LOG_TAG: String = "ListProvider"
 
     override fun insert(p0: Uri?, p1: ContentValues?): Uri {
-        return Uri.EMPTY
+        Log.d(LOG_TAG, "insert, " + p0.toString())
+        if (uriMatcher.match(p0) !== URI_LIST)
+            throw IllegalArgumentException("Wrong URI: " + p0)
+
+        val rowID = db.insert(LIST_TABLE, null, p1)
+        val resultUri = ContentUris.withAppendedId(LIST_CONTENT_URI, rowID)
+        // уведомляем ContentResolver, что данные по адресу resultUri изменились
+        context.contentResolver.notifyChange(resultUri, null)
+        return resultUri
     }
 
     override fun query(p0: Uri?, p1: Array<out String>?, p2: String?, p3: Array<out String>?, p4: String?): Cursor {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        var sortOrder = p4
+        var selection = p2
+        when (uriMatcher.match(p0)) {
+            URI_LIST -> {
+                Log.d(LOG_TAG, "URI_LIST")
+                if (!sortOrder.isNullOrBlank() || sortOrder!!.isEmpty()) {
+                    sortOrder = ITEM_ID/* + " ASC"*/
+                }
+            }
+            URI_LIST_ID -> {
+                val id = p0?.lastPathSegment
+                Log.d(LOG_TAG, "URI_LIST_ID, " + id)
+                if (TextUtils.isEmpty(selection)) {
+                    selection = ITEM_ID + " = " + id
+                } else {
+                    selection = "$selection AND $ITEM_ID = $id"
+                }
+            }
+            else -> throw IllegalArgumentException("Wrong URI: " + p0)
+        }
+
+        val cursor = db.query(LIST_TABLE, p1, selection,
+                p3, null, null, sortOrder)
+
+        cursor.setNotificationUri(context!!.contentResolver,
+                LIST_CONTENT_URI)
+        return cursor
     }
 
-
     override fun update(p0: Uri?, p1: ContentValues?, p2: String?, p3: Array<out String>?): Int {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        var selection = p2
+        Log.d(LOG_TAG, "update, " + p0.toString())
+        when (uriMatcher.match(p0)) {
+            URI_LIST -> Log.d(LOG_TAG, "URI_CONTACTS")
+            URI_LIST_ID -> {
+                val id = p0?.lastPathSegment
+                Log.d(LOG_TAG, "URI_CONTACTS_ID, " + id)
+                if (TextUtils.isEmpty(selection)) {
+                    selection = ITEM_ID + " = " + id
+                } else {
+                    selection = "$selection AND $ITEM_ID = $id"
+                }
+            }
+            else -> throw IllegalArgumentException("Wrong URI: " + p0)
+        }
+
+        val cnt = db.update(LIST_TABLE, p1, selection, p3)
+        context.contentResolver.notifyChange(p0, null)
+        return cnt
     }
 
     override fun delete(p0: Uri?, p1: String?, p2: Array<out String>?): Int {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        var selection = p1
+        Log.d(LOG_TAG, "delete, " + p0.toString())
+        when (uriMatcher.match(p0)) {
+            URI_LIST -> Log.d(LOG_TAG, "URI_CONTACTS")
+            URI_LIST_ID -> {
+                val id = p0?.lastPathSegment
+                Log.d(LOG_TAG, "URI_CONTACTS_ID, " + id)
+                if (TextUtils.isEmpty(selection)) {
+                    selection = ITEM_ID + " = " + id
+                } else {
+                    selection = "$selection AND $ITEM_ID = $id"
+                }
+            }
+            else -> throw IllegalArgumentException("Wrong URI: " + p0)
+        }
+        val cnt = db.delete(LIST_TABLE, selection, p2)
+        context!!.contentResolver.notifyChange(p0, null)
+        return cnt
     }
 
-    override fun getType(p0: Uri?): String {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun getType(p0: Uri?): String? {
+        Log.d(LOG_TAG, "getType, " + p0.toString())
+        when (uriMatcher.match(p0)) {
+            URI_LIST -> return LIST_CONTENT_TYPE
+            URI_LIST_ID -> return LIST_CONTENT_ITEM_TYPE
+        }
+        return null
     }
 
 }

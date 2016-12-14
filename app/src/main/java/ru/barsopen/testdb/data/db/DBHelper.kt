@@ -22,6 +22,5 @@ class DBHelper(val context: Context, name: String?= ListProvider.LIST_TABLE, fac
     }
 
     override fun onUpgrade(p0: SQLiteDatabase?, p1: Int, p2: Int) {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }

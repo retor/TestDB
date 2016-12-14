@@ -1,9 +1,11 @@
 package ru.barsopen.testdb.ui.mainlist
 
+import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
+import android.util.Log
 import com.h6ah4i.android.widget.advrecyclerview.animator.DraggableItemAnimator
 import com.h6ah4i.android.widget.advrecyclerview.draggable.RecyclerViewDragDropManager
 import kotlinx.android.synthetic.main.activity_main.*
@@ -12,6 +14,7 @@ import ru.barsopen.testdb.domain.interactors.ItemsInteractor
 import ru.barsopen.testdb.domain.models.Item
 import ru.barsopen.testdb.rx_events.PositionChanged
 import ru.barsopen.testdb.rx_events.RxBinder
+import ru.barsopen.testdb.services.SaveService
 import ru.barsopen.testdb.ui.adapters.SimpleAdapter
 import rx.Observable
 import rx.Subscription
@@ -48,19 +51,23 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
     }
 
     lateinit var mRecyclerViewDragDropManager: RecyclerViewDragDropManager
-    var arrayList:MutableList<Item> = ArrayList<Item>()
+
+    var arrayList: MutableList<Item> = ArrayList()
+
     val myItemAdapter by lazy {
         SimpleAdapter(ArrayList())
     }
 
-    var dragListener: SimpleAdapter.DragListener?=null
+    var dragListener: SimpleAdapter.DragListener? = null
 
-    private fun initRecycler(array:List<Item>) {
-        if (array.isNotEmpty()) {
+    private fun initRecycler(array: List<Item>) {
+        array.isNotEmpty().let {
             arrayList = array as ArrayList<Item>
         }
+
         // drag & drop manager
         mRecyclerViewDragDropManager = RecyclerViewDragDropManager()
+
         // Start dragging after long press
         mRecyclerViewDragDropManager.setInitiateOnLongPress(true)
         mRecyclerViewDragDropManager.setInitiateOnMove(false)
@@ -70,7 +77,7 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
 
         myItemAdapter.items = arrayList
 
-        val mWrappedAdapter = mRecyclerViewDragDropManager.createWrappedAdapter(myItemAdapter)      // wrap for dragging
+        val mWrappedAdapter = mRecyclerViewDragDropManager.createWrappedAdapter(myItemAdapter)
 
         val animator = DraggableItemAnimator()
 
@@ -116,7 +123,7 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
     }
 
     override fun onPause() {
-        mRecyclerViewDragDropManager.cancelDrag()
+        mRecyclerViewDragDropManager?.let { it.cancelDrag() }
         super.onPause()
     }
 
@@ -129,6 +136,18 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
     }
 
     fun fillList(): Func1<Observable<List<Item>>, Subscription> {
-       return RxBinder.ui({ initRecycler(it) }, { showError(it.message) })
+        return RxBinder.ui({ initRecycler(it) }, { showError(it.message) })
+    }
+
+    fun startSaveServiceI(position: PositionChanged) {
+        Thread(Runnable {
+            startService(Intent(applicationContext, SaveService::class.java).putExtra("pos", position))
+        }).start()
+    }
+
+    fun draggedSuccess(): Func1<Observable<List<Item>>, Subscription> {
+        return RxBinder.ui({
+            Log.d("End", "finishing $it")
+        }, { showError(it.message) })
     }
 }
