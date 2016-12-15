@@ -1,6 +1,5 @@
 package ru.barsopen.testdb.ui.mainlist
 
-import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
@@ -10,11 +9,11 @@ import com.h6ah4i.android.widget.advrecyclerview.animator.DraggableItemAnimator
 import com.h6ah4i.android.widget.advrecyclerview.draggable.RecyclerViewDragDropManager
 import kotlinx.android.synthetic.main.activity_main.*
 import ru.barsopen.testdb.R
+import ru.barsopen.testdb.data.repositories.ItemsRepository
 import ru.barsopen.testdb.domain.interactors.ItemsInteractor
 import ru.barsopen.testdb.domain.models.Item
 import ru.barsopen.testdb.rx_events.PositionChanged
 import ru.barsopen.testdb.rx_events.RxBinder
-import ru.barsopen.testdb.services.SaveService
 import ru.barsopen.testdb.ui.adapters.SimpleAdapter
 import rx.Observable
 import rx.Subscription
@@ -32,7 +31,7 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
     }
 
     private val presenter by lazy {
-        MainPresenter(ItemsInteractor())
+        MainPresenter(ItemsInteractor(ItemsRepository(contentResolver)))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +49,7 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
         presenter.onDetached(this)
     }
 
-    lateinit var mRecyclerViewDragDropManager: RecyclerViewDragDropManager
+    var mRecyclerViewDragDropManager: RecyclerViewDragDropManager?=null
 
     var arrayList: MutableList<Item> = ArrayList()
 
@@ -69,15 +68,15 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
         mRecyclerViewDragDropManager = RecyclerViewDragDropManager()
 
         // Start dragging after long press
-        mRecyclerViewDragDropManager.setInitiateOnLongPress(true)
-        mRecyclerViewDragDropManager.setInitiateOnMove(false)
+        mRecyclerViewDragDropManager?.setInitiateOnLongPress(true)
+        mRecyclerViewDragDropManager?.setInitiateOnMove(false)
 
         myItemAdapter.outerListener = this
         myItemAdapter.setHasStableIds(true)
 
         myItemAdapter.items = arrayList
 
-        val mWrappedAdapter = mRecyclerViewDragDropManager.createWrappedAdapter(myItemAdapter)
+        val mWrappedAdapter = mRecyclerViewDragDropManager?.createWrappedAdapter(myItemAdapter)
 
         val animator = DraggableItemAnimator()
 
@@ -87,7 +86,7 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
 
         recycler.itemAnimator = animator
 
-        mRecyclerViewDragDropManager.attachRecyclerView(recycler)
+        mRecyclerViewDragDropManager?.attachRecyclerView(recycler)
     }
 
     fun onItemDragged(): Observable<PositionChanged> {
@@ -141,7 +140,7 @@ class MainActivity : AppCompatActivity(), SimpleAdapter.DragListener {
 
     fun startSaveServiceI(position: PositionChanged) {
         Thread(Runnable {
-            startService(Intent(applicationContext, SaveService::class.java).putExtra("pos", position))
+//            startService(Intent(applicationContext, SaveService::class.java).putExtra("pos", position))
         }).start()
     }
 

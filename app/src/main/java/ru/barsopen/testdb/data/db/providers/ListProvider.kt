@@ -29,7 +29,7 @@ class ListProvider : ContentProvider() {
         val ITEM_DATE = "date"
 
         // Скрипт создания таблицы
-        val DB_CREATE = "create table $LIST_TABLE($ITEM_ID integer primary key autoincrement, " +
+        val DB_CREATE = "CREATE TABLE IF NOT EXISTS $LIST_TABLE($ITEM_ID integer primary key autoincrement, " +
                 "$ITEM_TITLE text, $ITEM_DESCRIPTION text, $ITEM_DATE number);"
 
         // // Uri
@@ -96,8 +96,8 @@ class ListProvider : ContentProvider() {
         when (uriMatcher.match(p0)) {
             URI_LIST -> {
                 Log.d(LOG_TAG, "URI_LIST")
-                if (!sortOrder.isNullOrBlank() || sortOrder!!.isEmpty()) {
-                    sortOrder = ITEM_ID/* + " ASC"*/
+                if (!sortOrder.isNullOrBlank()) {
+                    sortOrder = ITEM_ID + " ASC"
                 }
             }
             URI_LIST_ID -> {

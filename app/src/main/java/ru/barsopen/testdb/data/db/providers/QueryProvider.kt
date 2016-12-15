@@ -26,7 +26,7 @@ class QueryProvider : ContentProvider() {
         val QUERY_NEXT = "next"
 
         // Скрипт создания таблицы
-        val DB_CREATE = "create table $QUERY_TABLE($QUERY_ID integer primary key autoincrement, " +
+        val DB_CREATE = "CREATE TABLE IF NOT EXISTS $QUERY_TABLE($QUERY_ID integer primary key autoincrement, " +
                 "$QUERY_POSITION number, $QUERY_PREV number, $QUERY_NEXT number);"
 
         // // Uri
